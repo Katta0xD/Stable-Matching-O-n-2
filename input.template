@@ -1,0 +1,12 @@
+Men: man1 man2 man3 man4
+Women: woman1 woman2 woman3 woman4
+
+man1: woman4 woman1 woman2 woman3
+man2: woman2 woman3 woman4 woman1
+man3: woman2 woman1 woman3 woman4
+man4: woman3 woman4 woman2 woman1
+
+woman1: man2 man3 man1 man4
+woman2: man3 man1 man4 man2
+woman3: man4 man1 man3 man2
+woman4: man1 man4 man2 man3
