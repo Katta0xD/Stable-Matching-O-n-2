@@ -1,61 +1,34 @@
-#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #define MAX_LINE_LENGTH 2048
+
+typedef enum sex
+{
+    WOMAN,
+    MAN
+} Sex;
+
+typedef struct person
+{
+    char *name;
+    int index;
+    Sex sex;
+    int currentCouple;
+    int *preferenceByIndex;
+    int *indexByPreference;
+    int nextCandidate;
+} Person;
 
 typedef struct menStack
 {
-    struct man *value;
+    Person *value;
     struct menStack *previous;
 } MenStack;
 
-typedef struct woman
-{
-    char *name;
-    int currentCouple;
-    int index;
-    int *preferenceByIndex;
-    int *indexByPreference;
-} Woman;
-
-typedef struct man
-{
-    char *name;
-    int currentCouple;
-    int index;
-    int *preferenceByIndex;
-    int *indexByPreference;
-} Man;
-
-Woman **womenMasterArray;
-Man **menMasterArray;
+Person **womenMasterArray;
+Person **menMasterArray;
 int n;
-
-Woman *createWoman(char *name, int index)
-{
-    Woman *newWoman = malloc(sizeof(Woman));
-
-    newWoman->name = name; // do not free (name) anywhere or this propierty will be lose, it's just a pointer copy;
-    newWoman->currentCouple = -1; // null
-    newWoman->index = index;
-    newWoman->preferenceByIndex = 0; // null
-
-    return newWoman;
-}
-
-Man *createMan(char *name, int index)
-{
-    Man *newMan = malloc(sizeof(Man));
-
-    newMan->name = name;        // do not free (name) anywhere or this propierty will be lose, it's just a pointer copy;
-    newMan->currentCouple = -1; // null
-    newMan->index = index;
-    newMan->preferenceByIndex = 0; // null
-
-    return newMan;
-}
 
 int getValuesPosition(char *Line)
 {
@@ -74,18 +47,31 @@ int countValues(char *line)
     return n;
 }
 
-Woman **womenArrayCreate(char *womenLine, int valuesCount)
+Person *createPerson(char *name, int index, Sex sex)
 {
-    Woman **womenArray = malloc(sizeof(Woman *) * valuesCount);
-    int initialPosition = getValuesPosition(womenLine);
-    int womenIndex = 0;
+    Person *newPerson = malloc(sizeof(Person));
+
+    newPerson->name = name; // do not free (name) anywhere or this propierty will be lose, it's just a pointer copy;
+    newPerson->currentCouple = -1; // null
+    newPerson->index = index;
+    newPerson->sex = sex;
+    newPerson->preferenceByIndex = 0; // null
+
+    return newPerson;
+}
+
+Person **peopleArrayCreate(char *personLines, int valuesCount, Sex sex)
+{
+    Person **peopleArray = malloc(sizeof(Person *) * valuesCount);
+    int initialPosition = getValuesPosition(personLines);
+    int personIndex = 0;
     char nameBuffer[64];
     int nameBufferIndex = 0;
     char current;
 
     for (int i = initialPosition + 1;; i++)
     {
-        current = womenLine[i];
+        current = personLines[i];
 
         if (current != ' ' && current != '\n')
             nameBuffer[nameBufferIndex++] = current;
@@ -94,47 +80,17 @@ Woman **womenArrayCreate(char *womenLine, int valuesCount)
             nameBuffer[nameBufferIndex] = '\0';
             char *nameString = malloc(strlen(nameBuffer) + 1);
             strcpy(nameString, nameBuffer);
-            Woman *newWoman = createWoman(nameString, womenIndex);
-            womenArray[womenIndex++] = newWoman;
+            Person *newPerson = createPerson(nameString, personIndex, sex);
+            peopleArray[personIndex++] = newPerson;
             nameBufferIndex = 0;
             if (current == '\n')
                 break;
         }
     }
-    return womenArray;
+    return peopleArray;
 }
 
-Man **menArrayCreate(char *menLine, int valuesCount)
-{
-    Man **menArray = malloc(sizeof(Man *) * valuesCount);
-    int initialPosition = getValuesPosition(menLine);
-    int manIndex = 0;
-    char nameBuffer[64];
-    int nameBufferIndex = 0;
-    char current;
-
-    for (int i = initialPosition + 1;; i++)
-    {
-        current = menLine[i];
-
-        if (current != ' ' && current != '\n')
-            nameBuffer[nameBufferIndex++] = current;
-        else
-        {
-            nameBuffer[nameBufferIndex] = '\0';
-            char *nameString = malloc(strlen(nameBuffer) + 1);
-            strcpy(nameString, nameBuffer);
-            Man *newMan = createMan(nameString, manIndex);
-            menArray[manIndex++] = newMan;
-            nameBufferIndex = 0;
-            if (current == '\n')
-                break;
-        }
-    }
-    return menArray;
-}
-
-MenStack *menStackBuild(Man **menArray)
+MenStack *menStackBuild(Person **menArray)
 {
     MenStack *stack = 0;
     for (int i = 0; i < n; i++)
@@ -147,18 +103,18 @@ MenStack *menStackBuild(Man **menArray)
     return stack;
 }
 
-Man *menStackPop(MenStack **stack)
+Person *menStackPop(MenStack **stack)
 {
     if (*stack == 0)
         return 0;
     MenStack *linkToRemove = (*stack);
-    Man *returnMan = linkToRemove->value;
+    Person *returnMan = linkToRemove->value;
     *stack = (*stack)->previous;
     free(linkToRemove);
     return returnMan;
 }
 
-void menStackPush(MenStack **stack, Man *man)
+void menStackPush(MenStack **stack, Person *man)
 {
     MenStack *newLink = malloc(sizeof(MenStack));
     newLink->value = man;
@@ -166,50 +122,35 @@ void menStackPush(MenStack **stack, Man *man)
     *stack = newLink;
 }
 
-void womanPrint(Woman *woman)
+void personPrint(Person *person)
 {
-    printf("Name: %s\n", woman->name);
-    if (woman->currentCouple != -1)
-        printf("CurrentCouple: %s\n", menMasterArray[woman->currentCouple]->name);
-    if (woman->index != -1)
-        printf("Index: %d\n", woman->index);
-    if (woman->preferenceByIndex != 0)
+    printf("Name: %s\n", person->name);
+    if (person->currentCouple != -1)
+        if (person->sex == WOMAN)
+            printf("CurrentCouple: %s\n", menMasterArray[person->currentCouple]->name);
+        else
+            printf("CurrentCouple: %s\n", womenMasterArray[person->currentCouple]->name);
+    if (person->index != -1)
+        printf("Index: %d\n", person->index);
+    if (person->preferenceByIndex != 0)
         for (int i = 0; i < n; i++)
-            printf("[%d]: %d\n", i, woman->preferenceByIndex[i]);
+            printf("[%d]: %d\n", i, person->preferenceByIndex[i]);
 }
 
-void womenArrayPrint(Woman **womenArray, int n)
+void peopleArrayPrint(Person **peopleArray, int n)
 {
-    printf("Women: \n");
+    if (peopleArray[0]->sex == WOMAN)
+        printf("Women: \n");
+    else
+        printf("Men: \n");
     for (int i = 0; i < n; i++)
     {
-        womanPrint(womenArray[i]);
-    }
-}
-
-void manPrint(Man *man)
-{
-    printf("Name: %s\n", man->name);
-    if (man->currentCouple != -1)
-        printf("CurrentCouple: %s\n", womenMasterArray[man->currentCouple]->name);
-    if (man->index != -1)
-        printf("Index: %d\n", man->index);
-    if (man->preferenceByIndex != 0)
-        for (int i = 0; i < n; i++)
-            printf("[%d]: %d\n", i, man->preferenceByIndex[i]);
-}
-
-void menArrayPrint(Man **menArray, int n)
-{
-    printf("Men: \n");
-    for (int i = 0; i < n; i++)
-    {
-        manPrint(menArray[i]);
+        personPrint(peopleArray[i]);
     }
 }
 
 int countIntegerDigits(int number) // ints are 32 bits most of the time, one reserved to indicate the sign, it let us
-                                   // 2^31 = 2 147 483 648 posible values;
+                                   // 2^31 = 2.147.483.648 posible values;
 {
     int count = 1;
     count += (number >= 10);
@@ -224,121 +165,74 @@ int countIntegerDigits(int number) // ints are 32 bits most of the time, one res
     return count;
 }
 
-void menArrayLoadPreferences(
-    FILE *src) // this method is awful because at first the approach was different and i don't want to rewrite it.
+void loadPersonPreferences(Person *ranker, Person **candidatates)
+{
+}
+
+void peopleArrayLoadPreferences(FILE *src, Person **rankers, Person **candidatates, int n)
 {
     char line[MAX_LINE_LENGTH];
     for (int i = 0; i < n; i++)
     {
-        menMasterArray[i]->preferenceByIndex = malloc(sizeof(int) * n);
-        menMasterArray[i]->indexByPreference = malloc(sizeof(int) * n);
+        fgets(line, MAX_LINE_LENGTH, src);
+        loadPersonPreferences(rankers[i], candidatates);
     }
-    int manIndex = -1;
-    while (fgets(line, MAX_LINE_LENGTH, src) != 0 && (line[0] != '\n' && line[0] != ' ')) // 0 is null
-    {
-        manIndex++;
-        printf("-------------------------------\n");
-        printf("line:|%s", line);
-        char newLine[MAX_LINE_LENGTH];
-        for (int i = 0; i < n; i++)
-        {
-            char *match;
-            int matchIndex;
-            char charI[countIntegerDigits(n)];
-
-            sprintf(charI, "%0*d", countIntegerDigits(n), i);
-            match = strstr(line, womenMasterArray[i]->name);
-
-            // printf("Woman name:|%s|", womenMasterArray[i]->name);
-            // printf("match:|%s", match);
-            // fflush(stdout);
-
-            matchIndex = strlen(line) - strlen(match);
-
-            snprintf(newLine, matchIndex + 1, "%s", line); // the +1 is to make room for the EOF character
-            snprintf(newLine + matchIndex, strlen(charI) + 2, "%s_",
-                     charI); // the +2 is to make room for the EOF character and the '_'
-
-            sprintf(newLine + matchIndex + strlen(charI) + 1, "%s",
-                    line + matchIndex + strlen(womenMasterArray[i]->name) + 1);
-
-            strcpy(line, newLine);
-        }
-        int currentCharIndex = 0;
-        while (newLine[currentCharIndex++] != ' ')
-            ;
-        printf("after value finding:%s", &newLine[currentCharIndex]);
-
-        for (int j = 0; j < n; j++)
-        {
-            menMasterArray[manIndex]->preferenceByIndex[atoi(&newLine[currentCharIndex])] = j;
-            menMasterArray[manIndex]->indexByPreference[j] = atoi(&newLine[currentCharIndex]);
-            for (int k = 0; k < countIntegerDigits(n); k++)
-                currentCharIndex++;
-            currentCharIndex++;
-        }
-    }
-    printf("newline:|%s\n", line);
 }
+// void peopleArrayLoadPreferences(FILE *src, Person **peopleArray) // this method is awful because at first the
+// approach
+//                                                                  // was different and i don't want to rewrite it.
+// {
+//     char line[MAX_LINE_LENGTH];
+//     for (int i = 0; i < n; i++)
+//     {
+//         peopleArray[i]->preferenceByIndex = malloc(sizeof(int) * n);
+//         peopleArray[i]->indexByPreference = malloc(sizeof(int) * n);
+//     }
+//     int personIndex = -1;
+//     while (fgets(line, MAX_LINE_LENGTH, src) != 0 && (line[0] != '\n' && line[0] != ' ')) // 0 is null
+//     {
+//         personIndex++;
+//         printf("-------------------------------\n");
+//         printf("line:|%s", line);
+//         char newLine[MAX_LINE_LENGTH];
+//         for (int i = 0; i < n; i++)
+//         {
+//             char *match;
+//             int matchIndex;
+//             char charI[countIntegerDigits(n)];
+//
+//             sprintf(charI, "%0*d", countIntegerDigits(n), i);
+//             match = strstr(line, peopleArray[i]->name);
+//
+//             matchIndex = strlen(line) - strlen(match);
+//
+//             snprintf(newLine, matchIndex + 1, "%s", line); // the +1 is to make room for the EOF character
+//             snprintf(newLine + matchIndex, strlen(charI) + 2, "%s_",
+//                      charI); // the +2 is to make room for the EOF character and the '_'
+//
+//             sprintf(newLine + matchIndex + strlen(charI) + 1, "%s",
+//                     line + matchIndex + strlen(peopleArray[i]->name) + 1);
+//
+//             strcpy(line, newLine);
+//         }
+//         int currentCharIndex = 0;
+//         while (newLine[currentCharIndex++] != ' ')
+//             ;
+//         printf("after value finding:%s", &newLine[currentCharIndex]);
+//
+//         for (int j = 0; j < n; j++)
+//         {
+//             peopleArray[personIndex]->preferenceByIndex[atoi(&newLine[currentCharIndex])] = j;
+//             peopleArray[personIndex]->indexByPreference[j] = atoi(&newLine[currentCharIndex]);
+//             for (int k = 0; k < countIntegerDigits(n); k++)
+//                 currentCharIndex++;
+//             currentCharIndex++;
+//         }
+//     }
+//     printf("newline:|%s\n", line);
+// }
 
-void womenArrayLoadPreferences(
-    FILE *src) // this method is awful because at first the approach was different and i don't want to rewrite it.
-{
-    char line[MAX_LINE_LENGTH];
-    for (int i = 0; i < n; i++)
-    {
-        womenMasterArray[i]->preferenceByIndex = malloc(sizeof(int) * n);
-        womenMasterArray[i]->indexByPreference = malloc(sizeof(int) * n);
-    }
-    int womanIndex = -1;
-    while (fgets(line, MAX_LINE_LENGTH, src) != 0 && (line[0] != '\n' && line[0] != ' ')) // 0 is null
-    {
-        womanIndex++;
-        printf("-------------------------------\n");
-        printf("line:|%s", line);
-        char newLine[MAX_LINE_LENGTH];
-        for (int i = 0; i < n; i++)
-        {
-            char *match;
-            int matchIndex;
-            char charI[countIntegerDigits(n)];
-
-            sprintf(charI, "%0*d", countIntegerDigits(n), i);
-            match = strstr(line, menMasterArray[i]->name);
-
-            // printf("Woman name:|%s|", womenMasterArray[i]->name);
-            // printf("match:|%s", match);
-            // fflush(stdout);
-
-            matchIndex = strlen(line) - strlen(match);
-
-            snprintf(newLine, matchIndex + 1, "%s", line); // the +1 is to make room for the EOF character
-            snprintf(newLine + matchIndex, strlen(charI) + 2, "%s_",
-                     charI); // the +2 is to make room for the EOF character and the '_'
-
-            sprintf(newLine + matchIndex + strlen(charI) + 1, "%s",
-                    line + matchIndex + strlen(menMasterArray[i]->name) + 1);
-
-            strcpy(line, newLine);
-        }
-        int currentCharIndex = 0;
-        while (newLine[currentCharIndex++] != ' ')
-            ;
-        printf("after value finding:%s", &newLine[currentCharIndex]);
-
-        for (int j = 0; j < n; j++)
-        {
-            womenMasterArray[womanIndex]->preferenceByIndex[atoi(&newLine[currentCharIndex])] = j;
-            womenMasterArray[womanIndex]->indexByPreference[j] = atoi(&newLine[currentCharIndex]);
-            for (int k = 0; k < countIntegerDigits(n); k++)
-                currentCharIndex++;
-            currentCharIndex++;
-        }
-    }
-    printf("newline:|%s\n", line);
-}
-
-short manProposesToWoman(MenStack **ms, Man *man, Woman *woman)
+short manProposesToWoman(MenStack **ms, Person *man, Person *woman)
 {
     short accepted = 0;
     if (woman->currentCouple < 0 ||
@@ -362,10 +256,10 @@ short manProposesToWoman(MenStack **ms, Man *man, Woman *woman)
 
 void algGaleShapley(MenStack **ms)
 {
-    Man *suitor;
+    Person *suitor;
     while ((suitor = menStackPop(ms)))
     {
-        for (int i = 0; i < n; i++)
+        for (int i = suitor->nextCandidate; i < n; i++)
         {
             if (manProposesToWoman(ms, suitor, womenMasterArray[suitor->indexByPreference[i]]))
                 break;
@@ -390,22 +284,23 @@ int main()
 
     fgets(line, MAX_LINE_LENGTH, fp);
     n = countValues(line);
-    menMasterArray = menArrayCreate(line, n);
-    menArrayPrint(menMasterArray, n);
+
+    menMasterArray = peopleArrayCreate(line, n, MAN);
+    peopleArrayPrint(menMasterArray, n);
 
     ms = menStackBuild(menMasterArray);
 
     fgets(line, MAX_LINE_LENGTH, fp);
-    womenMasterArray = womenArrayCreate(line, n);
-    womenArrayPrint(womenMasterArray, n);
+    womenMasterArray = peopleArrayCreate(line, n, WOMAN);
+    peopleArrayPrint(womenMasterArray, n);
 
     fgets(line, MAX_LINE_LENGTH, fp);
-    menArrayLoadPreferences(fp);
-    menArrayPrint(menMasterArray, n);
+    peopleArrayLoadPreferences(fp, menMasterArray);
+    peopleArrayPrint(menMasterArray, n);
 
     // fgets(line, MAX_LINE_LENGTH, fp);
-    womenArrayLoadPreferences(fp);
-    womenArrayPrint(womenMasterArray, n);
+    peopleArrayLoadPreferences(fp, womenMasterArray);
+    peopleArrayPrint(womenMasterArray, n);
 
     algGaleShapley(&ms);
 
@@ -414,8 +309,7 @@ int main()
 
 // int main()
 // {
-//     fp = fopen("input", "r");
-//     char line[MAX_LINE_LENGTH];
+//     fp = fopen("input", "r"); char line[MAX_LINE_LENGTH];
 //
 //     fgets(line, MAX_LINE_LENGTH, fp);
 //     n = countValues(line);
