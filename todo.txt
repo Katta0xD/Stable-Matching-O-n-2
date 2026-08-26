@@ -1,4 +1,4 @@
 1 - fix string parsing logic, because it's not O(n^2)
-2 - make men resume proposing from their last attempt, because it's not O(n^2)
-3 - compact duplicated code and structs
+~~2 - make men resume proposing from their last attempt, because it's not O(n^2)~~
+~~3 - compact duplicated code and structs~~
 4- remove global variables.
